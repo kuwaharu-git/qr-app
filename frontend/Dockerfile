@@ -1,0 +1,21 @@
+FROM node:24.12.0-slim AS base
+
+WORKDIR /app
+
+# 依存関係のみコピー・インストール
+COPY ./app/package.json ./app/package-lock.json ./
+RUN npm ci
+
+# アプリ本体をコピー
+COPY ./app ./
+
+
+FROM base AS dev
+# 0.0.0.0:5173 で起動
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+
+FROM base AS build
+COPY app/ ./
+RUN npm run build
+
