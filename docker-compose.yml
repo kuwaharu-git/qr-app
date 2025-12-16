@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  # 開発環境: Backend
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    image: qr-app-backend:dev
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/app:/code/app  # ホットリロード用
+    networks:
+      - appnet
+
+  # 開発環境: Frontend (Vite dev server)
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    image: qr-app-frontend:dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/app:/app  # ホットリロード用
+      - /app/node_modules    # node_modules は除外
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5173
+    networks:
+      - appnet
+
+  # 本番環境: Backend
+  backend-prod:
+    profiles: ["prod"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    image: qr-app-backend:prod
+    expose:
+      - "80"
+    networks:
+      - appnet
+    restart: unless-stopped
+
+  # 本番環境: Nginx (Vite build + FastAPI proxy)
+  nginx-prod:
+    profiles: ["prod"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+    image: qr-app-frontend:prod
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend-prod
+    networks:
+      - appnet
+    restart: unless-stopped
+
+networks:
+  appnet:
+    driver: bridge
